@@ -12,16 +12,24 @@ function createToken(user) {
 
 exports.register = async (req, res) => {
 	const { name, email, password, phone, role } = req.body || {};
-	if (!email || !password) return res.status(400).json({ error: 'email and password required' });
-	if (role && !['user', 'admin'].includes(role)) return res.status(400).json({ error: 'invalid role' });
+	if (!email || !password) 
+		return res.status(400).json({ success: false, error: 'email and password required' });
+
+	if (role && !['user', 'admin'].includes(role)) 
+		return res.status(400).json({ success: false, error: 'invalid role' });
+
 	const existing = await User.findOne({ email });
 	if (existing) {
 		if (existing.provider === 'google') {
-			return res.status(409).json({ error: 'email registered with Google. Use Google login.' });
+			return res.status(409).json({ success: false, error: 'email registered with Google. Use Google login.' });
 		}
-		return res.status(409).json({ error: 'email already registered' });
+		return res.status(409).json({ success: false, error: 'email already registered' });
 	}
+
+	// hash password
 	const hash = await bcrypt.hash(password, 10);
+
+	// create user
 	const user = await User.create({
 		name: name || email.split('@')[0],
 		email,
@@ -30,18 +38,31 @@ exports.register = async (req, res) => {
 		provider: 'local',
 		role: role || 'user'
 	});
-	return res.status(201).json({ id: user._id, role: user.role });
+
+	// 🔑 auto-login after register
+	const token = createToken(user);
+
+	return res.status(201).json({
+		success: true,
+		token,
+		id: user._id,
+		name: user.name,
+		// email: user.email, // uncomment if needed
+		role: user.role
+	});
 };
+
 
 exports.login = async (req, res) => {
 	const { email, password } = req.body || {};
-	if (!email || !password) return res.status(400).json({ error: 'email and password required' });
+	if (!email || !password) return res.status(400).json({ success: false, error: 'email and password required' });
 	const user = await User.findOne({ email });
-	if (!user) return res.status(401).json({ error: 'invalid credentials' });
+	if (!user) return res.status(401).json({ success: false, error: 'invalid credentials' });
 	const ok = await bcrypt.compare(password, user.password);
-	if (!ok) return res.status(401).json({ error: 'invalid credentials' });
+	if (!ok) return res.status(401).json({ success: false, error: 'invalid credentials' });
 	const token = createToken(user);
 	return res.json({
+		success: true,
 		token,
 		id: user._id,
 		name: user.name,
@@ -52,14 +73,14 @@ exports.login = async (req, res) => {
 
 exports.googleLogin = async (req, res) => {
 	const { idToken } = req.body || {};
-	if (!idToken) return res.status(400).json({ error: 'idToken required' });
-	if (!googleClientId) return res.status(500).json({ error: 'Google client not configured' });
+	if (!idToken) return res.status(400).json({ success: false, error: 'idToken required' });
+	if (!googleClientId) return res.status(500).json({ success: false, error: 'Google client not configured' });
 
 	let ticket;
 	try {
 		ticket = await googleClient.verifyIdToken({ idToken, audience: googleClientId });
 	} catch (err) {
-		return res.status(401).json({ error: 'invalid google token' });
+		return res.status(401).json({ success: false, error: 'invalid google token' });
 	}
 
 	const payload = ticket.getPayload();
@@ -78,7 +99,7 @@ exports.googleLogin = async (req, res) => {
 		});
 	} else if (user.provider !== 'google') {
 		// Allow linking in future, but for now prevent conflicting providers
-		return res.status(409).json({ error: 'email already registered with password' });
+		return res.status(409).json({ success: false, error: 'email already registered with password' });
 	} else if (!user.googleId) {
 		user.googleId = googleId;
 		await user.save();
@@ -86,6 +107,7 @@ exports.googleLogin = async (req, res) => {
 
 	const token = createToken(user);
 	return res.json({
+		success: true,
 		token,
 		id: user._id,
 		name: user.name,
@@ -93,5 +115,3 @@ exports.googleLogin = async (req, res) => {
 		role: user.role
 	});
 };
-
-
