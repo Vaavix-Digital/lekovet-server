@@ -1,0 +1,25 @@
+const router = require('express').Router();
+const asyncHandler = require('../utils/asyncHandler');
+const userController = require('../controllers/userController');
+const { authenticate, requireRole } = require('../middleware/auth');
+
+// Protected routes - require authentication
+router.use(authenticate);
+
+// Get current user profile (any authenticated user)
+router.get('/profile', asyncHandler(userController.getCurrentUser));
+
+// Update current user profile (any authenticated user)
+router.put('/profile', asyncHandler(userController.updateUser));
+
+// Admin only routes
+router.get('/all', requireRole('admin'), asyncHandler(userController.getAllUsers));
+router.get('/stats', requireRole('admin'), asyncHandler(userController.getUserStats));
+
+// User management routes (Admin only)
+router.get('/:id', requireRole('admin'), asyncHandler(userController.getUserById));
+router.put('/:id', requireRole('admin'), asyncHandler(userController.updateUser));
+router.delete('/:id', requireRole('admin'), asyncHandler(userController.deleteUser));
+router.patch('/:id/role', requireRole('admin'), asyncHandler(userController.changeUserRole));
+
+module.exports = router;

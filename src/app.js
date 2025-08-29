@@ -5,6 +5,7 @@ const { isProduction } = require('./config');
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
@@ -27,6 +28,7 @@ app.get('/api/health', (req, res) => {
 
 // Feature routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/favorites', favoriteRoutes);

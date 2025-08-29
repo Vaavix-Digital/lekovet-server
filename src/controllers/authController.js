@@ -36,7 +36,8 @@ exports.register = async (req, res) => {
 		phone,
 		password: hash,
 		provider: 'local',
-		role: role || 'user'
+		role: role || 'user',
+		lastLogin: new Date() 
 	});
 
 	// 🔑 auto-login after register
@@ -95,7 +96,8 @@ exports.googleLogin = async (req, res) => {
 			email,
 			provider: 'google',
 			googleId,
-			role: 'user'
+			role: 'user',
+			lastLogin: new Date() 
 		});
 	} else if (user.provider !== 'google') {
 		// Allow linking in future, but for now prevent conflicting providers
