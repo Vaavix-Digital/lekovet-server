@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const path = require('path');
 const { isProduction } = require('./config');
 
 // Routes
@@ -21,6 +22,10 @@ if (!isProduction) {
 	app.use(morgan('dev'));
 }
 
+// Serve static files from uploads directory
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+app.use('/uploads', express.static(uploadsDir));
+
 // Health
 app.get('/api/health', (req, res) => {
 	res.json({ status: 'ok' });
@@ -30,6 +35,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
+
 app.use('/api/cart', cartRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/categories', categoryRoutes);

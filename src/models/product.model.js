@@ -22,7 +22,7 @@ const productSchema = new mongoose.Schema(
         sizes: [
             {
                 size: { type: String, enum: ["XS", "S", "M", "L", "XL"] },
-                available: { type: Boolean, default: true },
+                available: { type: Boolean, default: false },
             },
         ],
 
@@ -30,7 +30,7 @@ const productSchema = new mongoose.Schema(
             {
                 name: { type: String, required: true },
                 hexCode: { type: String, default: "#000000" },
-                images: [{ type: String }], // Array of image URLs
+                image: { type: String }, // Single image URL
             },
         ],
 
