@@ -45,42 +45,42 @@ exports.createProduct = [
 			}));
 
 			if (req.files && req.files.length > 0) {
-				console.log('Files received:', req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })));
-				console.log('Colors count:', parsedColors.length);
-				
+				//console.log('Files received:', req.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })));
+				//console.log('Colors count:', parsedColors.length);
+
 				// Process each file and match it to the correct color
 				for (let i = 0; i < req.files.length; i++) {
 					const file = req.files[i];
-					console.log(`Processing file ${i}:`, { fieldname: file.fieldname, filename: file.filename, path: file.path });
-					
-					// Extract color index from fieldname (e.g., "colorImage_0" -> 0)
-					const match = file.fieldname.match(/colorImage_(\d+)/);
-					console.log('Fieldname match result:', match);
-					
+					//console.log(`Processing file ${i}:`, { fieldname: file.fieldname, filename: file.filename, path: file.path });
+
+					// Extract color index from fieldname (e.g., "colorImage_0" or "colors[0][image]")
+					const match = file.fieldname.match(/colorImage_(\d+)/) || file.fieldname.match(/colors\[(\d+)\]\[image\]/);
+					//console.log('Fieldname match result:', match);
+
 					if (match) {
 						const colorIndex = parseInt(match[1]);
-						console.log(`Color index: ${colorIndex}, transformedColors length: ${transformedColors.length}`);
-						
+						//console.log(`Color index: ${colorIndex}, transformedColors length: ${transformedColors.length}`);
+
 						if (colorIndex < transformedColors.length) {
-							console.log('Processing image for color index:', colorIndex);
+							//console.log('Processing image for color index:', colorIndex);
 							// Process this single file
-							const processedImage = await processAndSaveImages([file], [0]);
-							console.log('Processed image result:', processedImage);
-							
+							const processedImage = await processAndSaveImages([file], [colorIndex]);
+							//console.log('Processed image result:', processedImage);
+
 							if (processedImage[0]) {
 								transformedColors[colorIndex].image = processedImage[0].url;
-								console.log(`Added image to color ${colorIndex}:`, processedImage[0].url);
+								//console.log(`Added image to color ${colorIndex}:`, processedImage[0].url);
 							} else {
-								console.log('No processed image returned');
+								//console.log('No processed image returned');
 							}
 						} else {
-							console.log('Color index out of range');
+							//console.log('Color index out of range');
 						}
 					} else {
-						console.log('No match found for fieldname pattern');
+						//console.log('No match found for fieldname pattern');
 					}
 				}
-				console.log('Final transformed colors:', transformedColors);
+				//console.log('Final transformed colors:', transformedColors);
 			}
 
 			// Create new product

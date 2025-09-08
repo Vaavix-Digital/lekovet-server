@@ -3,22 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
 
-// Configure multer for file upload
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const uploadDir = 'uploads/products';
-        // Create directory if it doesn't exist
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = path.extname(file.originalname);
-        cb(null, 'product-' + uniqueSuffix + ext);
-    }
-});
+// Configure multer for file upload (memory storage to avoid duplicate originals on disk)
+const storage = multer.memoryStorage();
 
 // File filter to accept only images
 const fileFilter = (req, file, cb) => {
@@ -54,23 +40,42 @@ const processAndSaveImages = async (files, colorIndexes) => {
     console.log('processAndSaveImages called with:', { filesCount: files.length, colorIndexes });
     const processedImages = [];
 
-    for (const index of colorIndexes) {
+    // If no explicit colorIndexes provided, attempt to derive from file fieldnames
+    const indexesToProcess = (Array.isArray(colorIndexes) && colorIndexes.length > 0)
+        ? colorIndexes
+        : files
+            .map(f => {
+                const field = (f.fieldname || '');
+                const matchA = field.match(/colorImage_(\d+)/);
+                const matchB = field.match(/colors\[(\d+)\]\[image\]/);
+                const match = matchA || matchB;
+                return match ? parseInt(match[1], 10) : null;
+            })
+            .filter(v => v !== null);
+
+    for (const index of indexesToProcess) {
         console.log(`Processing color index: ${index}`);
         // If we're processing a single file array, use the file directly
-        const file = colorIndexes.length === 1 && files.length === 1 ?
+        const file = indexesToProcess.length === 1 && files.length === 1 ?
             files[0] :
-            files.find(f => f.fieldname === `colorImage_${index}`);
+            files.find(f => f.fieldname === `colorImage_${index}` || f.fieldname === `colors[${index}][image]`);
 
         console.log('Found file:', file ? { fieldname: file.fieldname, filename: file.filename, path: file.path } : 'null');
 
         if (file) {
             try {
-                // Use the original file path from multer
-                const originalPath = file.path;
-                const processedFilename = `processed-${file.filename}`;
-                const outputPath = path.join('uploads/products/processed', processedFilename);
+                // Build a deterministic processed filename
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+                const sourceName = (file.originalname && file.originalname.trim().length > 0)
+                    ? path.parse(file.originalname).name
+                    : (file.filename ? path.parse(file.filename).name : `product-${uniqueSuffix}`);
+                const safeBase = sourceName.replace(/[^a-zA-Z0-9-_]+/g, '_');
+                const processedFilename = `processed-${safeBase}-${uniqueSuffix}.jpg`;
+                // Use absolute path aligned with express static '/uploads'
+                const uploadsRoot = path.join(__dirname, '..', '..', 'uploads');
+                const outputPath = path.join(uploadsRoot, 'products', 'processed', processedFilename);
 
-                console.log('Processing paths:', { originalPath, outputPath });
+                console.log('Processing output path and buffer:', { outputPath, hasBuffer: !!file.buffer });
 
                 // Create processed directory if it doesn't exist
                 const processedDir = path.dirname(outputPath);
@@ -79,17 +84,38 @@ const processAndSaveImages = async (files, colorIndexes) => {
                     fs.mkdirSync(processedDir, { recursive: true });
                 }
 
-                // Process image (resize, optimize, etc.)
-                await sharp(originalPath)
+                // Process image (resize, optimize, etc.) using buffer when available
+                const sharpInput = file.buffer ? file.buffer : (file.path || null);
+                if (!sharpInput) {
+                    throw new Error('No file buffer or path available for image processing');
+                }
+                await sharp(sharpInput)
                     .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
                     .jpeg({ quality: 85 })
                     .toFile(outputPath);
 
                 console.log('Image processed successfully');
 
-                // Remove original file
-                fs.unlinkSync(originalPath);
-                console.log('Original file removed');
+                // If original was saved to disk (diskStorage), remove it; with memoryStorage there is no path
+                if (file.path) {
+                    const unlinkWithRetry = async (targetPath, retries = 5, delayMs = 150) => {
+                        for (let attempt = 1; attempt <= retries; attempt++) {
+                            try {
+                                fs.unlinkSync(targetPath);
+                                return true;
+                            } catch (e) {
+                                if (e && e.code === 'EBUSY' && attempt < retries) {
+                                    await new Promise(r => setTimeout(r, delayMs));
+                                    continue;
+                                }
+                                console.warn(`Failed to remove original file (attempt ${attempt}/${retries}):`, e.message);
+                                if (attempt >= retries) return false;
+                            }
+                        }
+                        return false;
+                    };
+                    await unlinkWithRetry(file.path);
+                }
 
                 const processedImage = {
                     originalName: file.originalname,
