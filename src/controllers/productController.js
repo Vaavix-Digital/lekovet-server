@@ -332,10 +332,12 @@ exports.getProductsForAdmin = async (req, res) => {
 		const formattedProducts = products.map(prod => ({
 			_id: prod._id,
 			name: prod.name,
+			subCategory: prod.subCategory,
 			category: prod.category,
 			price: prod.price.amount, // only the number
 			image: prod.colors.length > 0 ? prod.colors[0].image : null
 		}));
+
 
 		res.status(200).json({
 			success: true,
