@@ -267,25 +267,25 @@ exports.deleteProduct = async (req, res) => {
 
 		// Remove associated images from filesystem
 		if (product.colors && product.colors.length > 0) {
+			const uploadsRoot = path.join(__dirname, '..', '..', 'uploads');
 			product.colors.forEach(color => {
-				if (color.image) {
-					// Handle if image is stored as URL (http://localhost:3000/uploads/...)
-					let filename = color.image;
-					if (filename.startsWith('http')) {
-						filename = new URL(filename).pathname; // -> /uploads/products/processed/file.jpg
+				const value = color && color.image ? String(color.image) : '';
+				if (!value) return;
+				let pathname = value;
+				try {
+					if (value.startsWith('http')) {
+						pathname = new URL(value).pathname;
 					}
-
-					// Convert to absolute path in your project
-					const imagePath = path.join(__dirname, '..', filename);
-
-					fs.unlink(imagePath, (err) => {
-						if (err) {
-							console.error(`Failed to delete image: ${imagePath}`, err.message);
-						} else {
-							console.log(`Deleted image: ${imagePath}`);
-						}
-					});
-				}
+				} catch { }
+				// Ensure it begins with /uploads; if not, skip
+				if (!pathname.startsWith('/uploads/')) return;
+				const relative = pathname.replace(/^\/uploads\//, '');
+				const imagePath = path.join(uploadsRoot, relative);
+				fs.unlink(imagePath, (err) => {
+					if (err && err.code !== 'ENOENT') {
+						console.error(`Failed to delete image: ${imagePath}`, err.message);
+					}
+				});
 			});
 		}
 
