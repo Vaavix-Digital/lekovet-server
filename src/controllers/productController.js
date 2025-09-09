@@ -1,5 +1,7 @@
 const Product = require('../models/product.model');
 const { uploadColorImages, processAndSaveImages } = require('../middleware/upload');
+const fs = require('fs');
+const path = require('path');
 
 // Create a new product
 exports.createProduct = [
@@ -263,11 +265,33 @@ exports.deleteProduct = async (req, res) => {
 			});
 		}
 
-		// TODO: Delete associated images from the filesystem
+		// Remove associated images from filesystem
+		if (product.colors && product.colors.length > 0) {
+			product.colors.forEach(color => {
+				if (color.image) {
+					// Handle if image is stored as URL (http://localhost:3000/uploads/...)
+					let filename = color.image;
+					if (filename.startsWith('http')) {
+						filename = new URL(filename).pathname; // -> /uploads/products/processed/file.jpg
+					}
+
+					// Convert to absolute path in your project
+					const imagePath = path.join(__dirname, '..', filename);
+
+					fs.unlink(imagePath, (err) => {
+						if (err) {
+							console.error(`Failed to delete image: ${imagePath}`, err.message);
+						} else {
+							console.log(`Deleted image: ${imagePath}`);
+						}
+					});
+				}
+			});
+		}
 
 		res.status(200).json({
 			success: true,
-			message: 'Product deleted successfully'
+			message: 'Product and images deleted successfully'
 		});
 	} catch (error) {
 		console.error('Error deleting product:', error);
@@ -278,6 +302,7 @@ exports.deleteProduct = async (req, res) => {
 		});
 	}
 };
+
 
 // Get products by category
 exports.getProductsByCategory = async (req, res) => {
@@ -295,6 +320,33 @@ exports.getProductsByCategory = async (req, res) => {
 		res.status(500).json({
 			success: false,
 			message: 'Error fetching products by category',
+			error: error.message
+		});
+	}
+};
+
+exports.getProductsForAdmin = async (req, res) => {
+	try {
+		const products = await Product.find().sort({ createdAt: -1 });
+
+		const formattedProducts = products.map(prod => ({
+			_id: prod._id,
+			name: prod.name,
+			category: prod.category,
+			price: prod.price.amount, // only the number
+			image: prod.colors.length > 0 ? prod.colors[0].image : null
+		}));
+
+		res.status(200).json({
+			success: true,
+			count: formattedProducts.length,
+			data: formattedProducts
+		});
+	} catch (error) {
+		console.error('Error fetching products:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Error fetching products',
 			error: error.message
 		});
 	}

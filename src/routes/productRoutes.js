@@ -6,6 +6,16 @@ const { authenticate, requireRole } = require('../middleware/auth');
 // Public routes
 router.get('/', asyncHandler(productController.getAllProducts));
 router.get('/category/:category', asyncHandler(productController.getProductsByCategory));
+
+// Admin route - must come before dynamic /:id
+router.get(
+    '/getAll',
+    authenticate,
+    requireRole('admin'),
+    asyncHandler(productController.getProductsForAdmin)
+);
+
+// Dynamic product ID route should come last
 router.get('/:id', asyncHandler(productController.getProductById));
 
 // Protected routes (require authentication and admin role)
@@ -13,7 +23,7 @@ router.post(
     '/create',
     authenticate,
     requireRole('admin'),
-    ...productController.createProduct
+    asyncHandler(productController.createProduct)
 );
 
 router.put(
