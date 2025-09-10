@@ -5,6 +5,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 
 // Public routes
 router.get('/', asyncHandler(productController.getAllProducts));
+router.get('/new-arrivals', asyncHandler(productController.getNewArrivals));
 router.get('/category/:category', asyncHandler(productController.getProductsByCategory));
 
 // Admin route - must come before dynamic /:id

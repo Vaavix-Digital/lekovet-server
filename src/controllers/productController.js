@@ -353,3 +353,34 @@ exports.getProductsForAdmin = async (req, res) => {
 		});
 	}
 };
+
+// Get new arrivals - returns only the 8 newest products
+exports.getNewArrivals = async (req, res) => {
+	try {
+		const products = await Product.find({})
+			.sort({ createdAt: -1 })
+			.limit(8);
+
+		const formattedProducts = products.map(prod => ({
+			_id: prod._id,
+			name: prod.name,
+			subCategory: prod.subCategory,
+			category: prod.category,
+			price: prod.price.amount, // only the number
+			image: prod.colors.length > 0 ? prod.colors[0].image : null
+		}));
+
+		res.status(200).json({
+			success: true,
+			count: formattedProducts.length,
+			data: formattedProducts
+		});
+	} catch (error) {
+		console.error('Error fetching new arrivals:', error);
+		res.status(500).json({
+			success: false,
+			message: 'Error fetching new arrivals',
+			error: error.message
+		});
+	}
+};
