@@ -24,7 +24,7 @@ router.post(
     '/create',
     authenticate,
     requireRole('admin'),
-    asyncHandler(productController.createProduct)
+    ...productController.createProduct
 );
 
 router.put(
