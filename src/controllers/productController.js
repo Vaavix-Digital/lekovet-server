@@ -384,3 +384,64 @@ exports.getNewArrivals = async (req, res) => {
 		});
 	}
 };
+
+
+exports.addComment = async (req, res) => {
+	try {
+		const { id } = req.params; // product ID
+		const { userId, username, comment, rating } = req.body;
+
+		if (!comment || !userId) {
+			return res.status(400).json({
+				success: false,
+				message: "User ID and comment are required",
+			});
+		}
+
+		// Find product
+		const product = await Product.findById(id);
+		if (!product) {
+			return res.status(404).json({
+				success: false,
+				message: "Product not found",
+			});
+		}
+
+		// Create new comment object
+		const newComment = {
+			userId,
+			username,
+			comment,
+			rating: rating ? parseInt(rating, 10) : undefined,
+			createdAt: new Date(),
+		};
+
+		// Add comment to product
+		product.comments.push(newComment);
+
+		// Update product rating if rating provided
+		if (rating) {
+			const totalRatings =
+				product.rating.average * product.rating.count + parseInt(rating, 10);
+			product.rating.count += 1;
+			product.rating.average = totalRatings / product.rating.count;
+		}
+
+		// Save changes
+		await product.save();
+
+		res.status(201).json({
+			success: true,
+			message: "Comment added successfully",
+			data: product.comments,
+			rating: product.rating,
+		});
+	} catch (error) {
+		console.error("Error adding comment:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error adding comment",
+			error: error.message,
+		});
+	}
+};

@@ -16,6 +16,12 @@ router.get(
     asyncHandler(productController.getProductsForAdmin)
 );
 
+router.post(
+    '/comment/:id',
+    authenticate, // optional: require users to be logged in
+    asyncHandler(productController.addComment)
+);
+
 // Dynamic product ID route should come last
 router.get('/:id', asyncHandler(productController.getProductById));
 

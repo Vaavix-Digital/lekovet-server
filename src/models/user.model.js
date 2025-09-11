@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
 	favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
 	cart: [cartItemSchema]
 }, { timestamps: true });
-
+	
 module.exports = mongoose.model('User', userSchema);
 
 

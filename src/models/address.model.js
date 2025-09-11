@@ -12,7 +12,7 @@ const addressSchema = new mongoose.Schema({
 	postalCode: { type: String, required: true },
 	phone: { type: String, required: true },
 	deliveryInstruction: { type: String },
-	label: { type: String, enum: ['Home', 'Office', 'Other'], default: 'Home' },
+	// label: { type: String, enum: ['Home', 'Office', 'Other'], default: 'Home' },
 	isDefaultShipping: { type: Boolean, default: false },
 	isDefaultBilling: { type: Boolean, default: false }
 }, { timestamps: true });
