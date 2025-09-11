@@ -355,20 +355,15 @@ exports.removeFromFavorites = async (req, res) => {
 };
 
 // Get user's favorite products
+// const Product = require('../models/product.model');
+// const User = require('../models/user.model');
+
 exports.getFavorites = async (req, res) => {
 	try {
 		const userId = req.user.id;
 		const { page = 1, limit = 10 } = req.query;
 
-		const user = await User.findById(userId)
-			.populate({
-				path: 'favorites',
-				select: 'name price images category brand inStock',
-				options: {
-					limit: limit * 1,
-					skip: (page - 1) * limit
-				}
-			});
+		const user = await User.findById(userId).select('favorites');
 
 		if (!user) {
 			return res.status(404).json({
@@ -377,12 +372,29 @@ exports.getFavorites = async (req, res) => {
 			});
 		}
 
-		// Get total count of favorites for pagination
+		// Total favorites count
 		const totalFavorites = user.favorites.length;
+
+		// Fetch product docs for those IDs
+		const favoriteProducts = await Product.find({
+			_id: { $in: user.favorites }
+		})
+			.skip((page - 1) * limit)
+			.limit(parseInt(limit));
+
+
+			const formattedProducts = favoriteProducts.map(prod => ({
+				_id: prod._id,
+				name: prod.name,
+				subCategory: prod.subCategory,
+				category: prod.category,
+				price: prod.price.amount, // only the number
+				image: prod.colors.length > 0 ? prod.colors[0].image : null
+			}));
 
 		return res.json({
 			success: true,
-			data: user.favorites,
+			data: formattedProducts, // full product docs
 			pagination: {
 				currentPage: parseInt(page),
 				totalPages: Math.ceil(totalFavorites / limit),
@@ -399,6 +411,7 @@ exports.getFavorites = async (req, res) => {
 		});
 	}
 };
+
 
 // Toggle favorite (add if not exists, remove if exists)
 exports.toggleFavorite = async (req, res) => {
@@ -446,3 +459,185 @@ exports.toggleFavorite = async (req, res) => {
 		});
 	}
 };
+
+// Add address to user
+exports.addAddress = async (req, res) => {
+	try {
+		const userId = req.user.id;
+		const {
+			firstName,
+			lastName,
+			country,
+			companyName,
+			streetAddress,
+			aptSuite,
+			city,
+			state,
+			postalCode,
+			phone,
+			deliveryInstruction,
+			isDefaultBilling,
+			isDefaultShipping
+		} = req.body;
+
+		// Validate required fields
+		if (!firstName || !lastName || !country || !streetAddress || !city || !state || !postalCode || !phone) {
+			return res.status(400).json({
+				success: false,
+				error: 'Missing required fields: firstName, lastName, country, streetAddress, city, state, postalCode, phone'
+			});
+		}
+
+		// Create new address object
+		const newAddress = {
+			firstName,
+			lastName,
+			country,
+			companyName,
+			streetAddress,
+			aptSuite,
+			city,
+			state,
+			postalCode,
+			phone,
+			deliveryInstruction,
+			isDefaultBilling,
+			isDefaultShipping
+		};
+
+		// Add address to user's addresses array
+		const updatedUser = await User.findByIdAndUpdate(
+			userId,
+			{ $push: { addresses: newAddress } },
+			{ new: true, runValidators: true }
+		).select('-password -__v');
+
+		if (!updatedUser) {
+			return res.status(404).json({
+				success: false,
+				error: 'User not found'
+			});
+		}
+
+		// Get the newly added address (last one in the array)
+		const addedAddress = updatedUser.addresses[updatedUser.addresses.length - 1];
+
+		return res.status(201).json({
+			success: true,
+			message: 'Address added successfully',
+			data: addedAddress
+		});
+	} catch (error) {
+		return res.status(500).json({
+			success: false,
+			error: 'Failed to add address',
+			message: error.message
+		});
+	}
+};
+
+// Get user addresses
+exports.getAddresses = async (req, res) => {
+	try {
+		const userId = req.user.id;
+
+		const user = await User.findById(userId).select('addresses');
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				error: 'User not found'
+			});
+		}
+
+		return res.json({
+			success: true,
+			data: user.addresses
+		});
+	} catch (error) {
+		return res.status(500).json({
+			success: false,
+			error: 'Failed to fetch addresses',
+			message: error.message
+		});
+	}
+};
+
+// Update address
+exports.updateAddress = async (req, res) => {
+	try {
+		const userId = req.user.id;
+		const { addressId } = req.params;
+		const updateData = req.body;
+
+		// Find user and update specific address
+		const user = await User.findById(userId);
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				error: 'User not found'
+			});
+		}
+
+		// Find the address to update
+		const addressIndex = user.addresses.findIndex(addr => addr._id.toString() === addressId);
+		if (addressIndex === -1) {
+			return res.status(404).json({
+				success: false,
+				error: 'Address not found'
+			});
+		}
+
+		// Update the address
+		Object.keys(updateData).forEach(key => {
+			if (updateData[key] !== undefined) {
+				user.addresses[addressIndex][key] = updateData[key];
+			}
+		});
+
+		await user.save();
+
+		return res.json({
+			success: true,
+			message: 'Address updated successfully',
+			data: user.addresses[addressIndex]
+		});
+	} catch (error) {
+		return res.status(500).json({
+			success: false,
+			error: 'Failed to update address',
+			message: error.message
+		});
+	}
+};
+
+// // Delete address
+// exports.deleteAddress = async (req, res) => {
+// 	try {
+// 		const userId = req.user.id;
+// 		const { addressId } = req.params;
+
+// 		const updatedUser = await User.findByIdAndUpdate(
+// 			userId,
+// 			{ $pull: { addresses: { _id: addressId } } },
+// 			{ new: true }
+// 		);
+
+// 		if (!updatedUser) {
+// 			return res.status(404).json({
+// 				success: false,
+// 				error: 'User not found'
+// 			});
+// 		}
+
+// 		return res.json({
+// 			success: true,
+// 			message: 'Address deleted successfully'
+// 		});
+// 	} catch (error) {
+// 		return res.status(500).json({
+// 			success: false,
+// 			error: 'Failed to delete address',
+// 			message: error.message
+// 		});
+// 	}
+// };

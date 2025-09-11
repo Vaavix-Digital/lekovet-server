@@ -14,9 +14,14 @@ router.put('/profile', asyncHandler(userController.updateUser));
 
 // Favorite routes (authenticated users only)
 router.post('/favorites', asyncHandler(userController.addToFavorites));
-router.delete('/favorites/:productId', asyncHandler(userController.removeFromFavorites));
+router.delete('/removeFavorites/:productId', asyncHandler(userController.removeFromFavorites));
 router.get('/favorites', asyncHandler(userController.getFavorites));
 router.patch('/favorites/toggle', asyncHandler(userController.toggleFavorite));
+
+// Address routes (authenticated users only)
+router.post('/address', asyncHandler(userController.addAddress));
+router.get('/getAddresses', asyncHandler(userController.getAddresses));
+router.put('/addresses/:addressId', asyncHandler(userController.updateAddress));
 
 // Admin only routes
 router.get('/all', requireRole('admin'), asyncHandler(userController.getAllUsers));
