@@ -12,6 +12,12 @@ router.get('/profile', asyncHandler(userController.getCurrentUser));
 // Update current user profile (any authenticated user)
 router.put('/profile', asyncHandler(userController.updateUser));
 
+// Favorite routes (authenticated users only)
+router.post('/favorites', asyncHandler(userController.addToFavorites));
+router.delete('/favorites/:productId', asyncHandler(userController.removeFromFavorites));
+router.get('/favorites', asyncHandler(userController.getFavorites));
+router.patch('/favorites/toggle', asyncHandler(userController.toggleFavorite));
+
 // Admin only routes
 router.get('/all', requireRole('admin'), asyncHandler(userController.getAllUsers));
 router.get('/stats', requireRole('admin'), asyncHandler(userController.getUserStats));

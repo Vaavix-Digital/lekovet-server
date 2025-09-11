@@ -18,7 +18,7 @@ exports.createProduct = [
 				price,
 				stock,
 				estimatedDelivery,
-				status = 'Draft',
+				trending = false,
 				freeShipping = false,
 				returnAvailable = false,
 				sizes = [],
@@ -99,6 +99,7 @@ exports.createProduct = [
 					currency: 'USD'
 				},
 				stock: parseInt(stock, 10),
+				trending,
 				shipping: {
 					freeShipping: freeShipping === 'true' || freeShipping === true,
 					returnAvailable: returnAvailable === 'true' || returnAvailable === true,

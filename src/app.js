@@ -9,7 +9,6 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
-const favoriteRoutes = require('./routes/favoriteRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const { errorHandler } = require('./middleware/error');
 
@@ -37,7 +36,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 
 app.use('/api/cart', cartRoutes);
-app.use('/api/favorites', favoriteRoutes);
 app.use('/api/categories', categoryRoutes);
 
 // Centralized error handler (last)

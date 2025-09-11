@@ -1,4 +1,5 @@
 const User = require('../models/user.model');
+const Product = require('../models/product.model');
 
 // Get all users (Admin only)
 exports.getAllUsers = async (req, res) => {
@@ -278,6 +279,169 @@ exports.getUserStats = async (req, res) => {
 		return res.status(500).json({
 			success: false,
 			error: 'Failed to fetch user statistics',
+			message: error.message
+		});
+	}
+};
+
+// Add product to favorites
+exports.addToFavorites = async (req, res) => {
+	try {
+		const { productId } = req.body;
+		const userId = req.user.id;
+
+		// Validate product exists
+		const product = await Product.findById(productId);
+		if (!product) {
+			return res.status(404).json({
+				success: false,
+				error: 'Product not found'
+			});
+		}
+
+		// Add to favorites (using $addToSet to prevent duplicates)
+		await User.findByIdAndUpdate(
+			userId,
+			{ $addToSet: { favorites: productId } },
+			{ new: true }
+		);
+
+		return res.json({
+			success: true,
+			message: 'Product added to favorites successfully'
+		});
+	} catch (error) {
+		return res.status(500).json({
+			success: false,
+			error: 'Failed to add product to favorites',
+			message: error.message
+		});
+	}
+};
+
+// Remove product from favorites
+exports.removeFromFavorites = async (req, res) => {
+	try {
+		const { productId } = req.params;
+		const userId = req.user.id;
+
+		// Check if product is in favorites
+		const user = await User.findById(userId);
+		if (!user.favorites.includes(productId)) {
+			return res.status(400).json({
+				success: false,
+				error: 'Product not in favorites'
+			});
+		}
+
+		// Remove from favorites
+		await User.findByIdAndUpdate(
+			userId,
+			{ $pull: { favorites: productId } },
+			{ new: true }
+		);
+
+		return res.json({
+			success: true,
+			message: 'Product removed from favorites successfully'
+		});
+	} catch (error) {
+		return res.status(500).json({
+			success: false,
+			error: 'Failed to remove product from favorites',
+			message: error.message
+		});
+	}
+};
+
+// Get user's favorite products
+exports.getFavorites = async (req, res) => {
+	try {
+		const userId = req.user.id;
+		const { page = 1, limit = 10 } = req.query;
+
+		const user = await User.findById(userId)
+			.populate({
+				path: 'favorites',
+				select: 'name price images category brand inStock',
+				options: {
+					limit: limit * 1,
+					skip: (page - 1) * limit
+				}
+			});
+
+		if (!user) {
+			return res.status(404).json({
+				success: false,
+				error: 'User not found'
+			});
+		}
+
+		// Get total count of favorites for pagination
+		const totalFavorites = user.favorites.length;
+
+		return res.json({
+			success: true,
+			data: user.favorites,
+			pagination: {
+				currentPage: parseInt(page),
+				totalPages: Math.ceil(totalFavorites / limit),
+				totalFavorites,
+				hasNextPage: page * limit < totalFavorites,
+				hasPrevPage: page > 1
+			}
+		});
+	} catch (error) {
+		return res.status(500).json({
+			success: false,
+			error: 'Failed to fetch favorites',
+			message: error.message
+		});
+	}
+};
+
+// Toggle favorite (add if not exists, remove if exists)
+exports.toggleFavorite = async (req, res) => {
+	try {
+		const { productId } = req.body;
+		const userId = req.user.id;
+
+		// Validate product exists
+		const product = await Product.findById(productId);
+		if (!product) {
+			return res.status(404).json({
+				success: false,
+				error: 'Product not found'
+			});
+		}
+
+		const user = await User.findById(userId);
+		const isInFavorites = user.favorites.includes(productId);
+
+		let updateOperation;
+		let message;
+
+		if (isInFavorites) {
+			// Remove from favorites
+			updateOperation = { $pull: { favorites: productId } };
+			message = 'Product removed from favorites successfully';
+		} else {
+			// Add to favorites (using $addToSet to prevent duplicates)
+			updateOperation = { $addToSet: { favorites: productId } };
+			message = 'Product added to favorites successfully';
+		}
+
+		await User.findByIdAndUpdate(userId, updateOperation, { new: true });
+
+		return res.json({
+			success: true,
+			message,
+			isInFavorites: !isInFavorites
+		});
+	} catch (error) {
+		return res.status(500).json({
+			success: false,
+			error: 'Failed to toggle favorite',
 			message: error.message
 		});
 	}

@@ -77,6 +77,8 @@ const productSchema = new mongoose.Schema(
             },
         ],
 
+        trending: { type: Boolean, default: false },
+
         meta: {
             createdAt: { type: Date, default: Date.now },
             updatedAt: { type: Date, default: Date.now },
