@@ -14,6 +14,25 @@ function authenticate(req, res, next) {
 	}
 }
 
+function optionalAuthenticate(req, res, next) {
+	const authHeader = req.headers.authorization || '';
+	const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+	
+	if (!token) {
+		// No token provided, continue without authentication
+		return next();
+	}
+	
+	try {
+		const payload = jwt.verify(token, jwtSecret);
+		req.user = { id: payload.sub, role: payload.role };
+		return next();
+	} catch (err) {
+		// Invalid token, continue without authentication
+		return next();
+	}
+}
+
 function requireRole(role) {
 	return (req, res, next) => {
 		if (!req.user || req.user.role !== role) {
@@ -23,6 +42,6 @@ function requireRole(role) {
 	};
 }
 
-module.exports = { authenticate, requireRole };
+module.exports = { authenticate, optionalAuthenticate, requireRole };
 
 

@@ -10,6 +10,7 @@ const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
 const { errorHandler } = require('./middleware/error');
 
 const app = express();
@@ -34,6 +35,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 app.use('/api/cart', cartRoutes);
 app.use('/api/categories', categoryRoutes);
