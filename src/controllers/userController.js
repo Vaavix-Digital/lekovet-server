@@ -198,56 +198,6 @@ exports.deleteUser = async (req, res) => {
 	}
 };
 
-// Change user role (Admin only)
-exports.changeUserRole = async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { role } = req.body;
-
-		if (!['user', 'admin'].includes(role)) {
-			return res.status(400).json({
-				success: false,
-				error: 'Invalid role. Must be "user" or "admin"'
-			});
-		}
-
-		// Check if user exists
-		const user = await User.findById(id);
-		if (!user) {
-			return res.status(404).json({
-				success: false,
-				error: 'User not found'
-			});
-		}
-
-		// Prevent admin from changing their own role
-		if (req.user.id === id) {
-			return res.status(400).json({
-				success: false,
-				error: 'Cannot change your own role'
-			});
-		}
-
-		const updatedUser = await User.findByIdAndUpdate(
-			id,
-			{ role },
-			{ new: true, runValidators: true }
-		).select('-password -__v');
-
-		return res.json({
-			success: true,
-			data: updatedUser,
-			message: 'User role updated successfully'
-		});
-	} catch (error) {
-		return res.status(500).json({
-			success: false,
-			error: 'Failed to update user role',
-			message: error.message
-		});
-	}
-};
-
 // Get user statistics (Admin only)
 exports.getUserStats = async (req, res) => {
 	try {

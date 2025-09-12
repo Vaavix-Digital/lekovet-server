@@ -12,10 +12,10 @@ function createToken(user) {
 
 exports.register = async (req, res) => {
 	const { name, email, password, phone, role } = req.body || {};
-	if (!email || !password) 
+	if (!email || !password)
 		return res.status(400).json({ success: false, error: 'email and password required' });
 
-	if (role && !['user', 'admin'].includes(role)) 
+	if (role && !['user', 'admin'].includes(role))
 		return res.status(400).json({ success: false, error: 'invalid role' });
 
 	const existing = await User.findOne({ email });
@@ -37,7 +37,7 @@ exports.register = async (req, res) => {
 		password: hash,
 		provider: 'local',
 		role: role || 'user',
-		lastLogin: new Date() 
+		lastLogin: new Date()
 	});
 
 	// 🔑 auto-login after register
@@ -61,6 +61,10 @@ exports.login = async (req, res) => {
 	if (!user) return res.status(401).json({ success: false, error: 'invalid credentials' });
 	const ok = await bcrypt.compare(password, user.password);
 	if (!ok) return res.status(401).json({ success: false, error: 'invalid credentials' });
+
+	// Update lastLogin timestamp
+	await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+
 	const token = createToken(user);
 	return res.json({
 		success: true,
@@ -97,14 +101,18 @@ exports.googleLogin = async (req, res) => {
 			provider: 'google',
 			googleId,
 			role: 'user',
-			lastLogin: new Date() 
+			lastLogin: new Date()
 		});
 	} else if (user.provider !== 'google') {
 		// Allow linking in future, but for now prevent conflicting providers
 		return res.status(409).json({ success: false, error: 'email already registered with password' });
 	} else if (!user.googleId) {
 		user.googleId = googleId;
+		user.lastLogin = new Date();
 		await user.save();
+	} else {
+		// Update lastLogin for existing Google user
+		await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 	}
 
 	const token = createToken(user);

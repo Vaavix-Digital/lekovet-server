@@ -31,6 +31,5 @@ router.get('/stats', requireRole('admin'), asyncHandler(userController.getUserSt
 router.get('/:id', requireRole('admin'), asyncHandler(userController.getUserById));
 router.put('/:id', requireRole('admin'), asyncHandler(userController.updateUser));
 router.delete('/:id', requireRole('admin'), asyncHandler(userController.deleteUser));
-router.patch('/:id/role', requireRole('admin'), asyncHandler(userController.changeUserRole));
 
 module.exports = router;
