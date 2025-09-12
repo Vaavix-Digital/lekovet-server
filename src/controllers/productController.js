@@ -390,7 +390,10 @@ exports.getNewArrivals = async (req, res) => {
 exports.addComment = async (req, res) => {
 	try {
 		const { id } = req.params; // product ID
-		const { userId, username, comment, rating } = req.body;
+		const { username, comment, rating } = req.body;
+
+		const userId = req.user.id;
+
 
 		if (!comment || !userId) {
 			return res.status(400).json({
